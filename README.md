@@ -1,7 +1,9 @@
 # README
 ## Group Information
 Group Name: [T06_G14]
+
 Student Number: UP202108876
+
 Full Name: Lara Inês Alves Cunha
 ## Contribution
 Lara Inês Alves Cunha: 100%
@@ -24,8 +26,6 @@ updateVar: Helper function to update a variable in the state.
 store: Helper function to store a variable in the state.
 testAssembler: Function to test the assembler with predefined code examples.
 ### Example Usage
-haskell
-Copy code
 -- Example 1: Arithmetic operations
 testAssembler [Push 10, Push 4, Push 3, Sub, Mult]  -- Output: ("-10","")
 
@@ -44,8 +44,6 @@ compA: Compiles an arithmetic expression into assembly code.
 compB: Compiles a boolean expression into assembly code.
 compile: Compiles a list of statements into assembly code.
 ### Example Usage
-haskell
-Copy code
 -- Example: Compile and run a simple program
 testParser "x := 5; x := x - 1;"
 -- Output: ("","x=4")
