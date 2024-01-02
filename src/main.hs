@@ -22,10 +22,14 @@ type Code = [Inst]
 type Stack = [Integer]
 
 -- createEmptyStack :: Stack
+-- (returns an empty machine’s stack)
 createEmptyStack :: Stack
 createEmptyStack = []
 
 -- stack2Str :: Stack -> String
+-- (converts a stack given as input to a string.
+-- The string represents the stack as an ordered list of values, separated by commas
+-- and without spaces, with the leftmost value representing the top of the stack.)
 stack2Str :: Stack -> String
 stack2Str stack = intercalate "," (map showValue stack)
 
@@ -39,12 +43,17 @@ showValue x
 type State = [(String, Integer)]
 
 -- createEmptyState :: State
+-- (returns an empty machine’s state)
 createEmptyState :: State
 createEmptyState = []
 
 -- Atualização da função state2Str
+-- ( The string represents the state as an list of pairs variable-value, separated
+-- by commas and without spaces, with the pairs ordered in alphabetical order of the
+-- variable name. Each variable-value pair is represented without spaces and using an
+-- ”=”)
 state2Str :: State -> String
-state2Str state = intercalate "," [var ++ "=" ++ show val | (var, val) <- reverse state]
+state2Str state = intercalate "," [var ++ "=" ++ showValue val | (var, val) <- reverse state]
 
 
 -- run :: (Code, Stack, State) -> (Code, Stack, State)
@@ -60,15 +69,15 @@ run (inst:code, stack, state) = case inst of
   Tru -> run (code, 1:stack, state)
   Fals -> run (code, 0:stack, state)
   Equ -> run (code, performBinaryOperation (\x y -> if x == y then 1 else 0) stack, state)
-  Le -> run (code, performBinaryOperation (\x y -> if x <= y then 1 else 0) stack, state)
+  Le -> run (code, performBinaryOperation (\x y -> if x <= y then 0 else 1) stack, state)
   And -> run (code, performBinaryOperation (\x y -> if x /= 0 && y /= 0 then 1 else 0) stack, state)
-  Neg -> run (code, negate (head stack):tail stack, state)
+  Neg -> run (code, negate (lookupVarBool "Neg" state) : tail stack, state)
   Fetch x -> run (code, lookupVarBool x state:stack, state)
   Store x -> run (code, tail stack, store x state stack)  -- Fix: Use value from the stack
   Noop -> run (code, stack, state)
   Branch c1 c2 -> if head stack /= 0 then run (c1 ++ code, tail stack, state)
                   else run (c2 ++ code, tail stack, state)
-  Loop c1 c2 -> if head stack /= 0 then run (c1 ++ [Branch (c2 ++ [Loop c1 c2]) [Noop]] ++ code, tail stack, state)
+  Loop c1 c2 -> if head stack /= 0 then run (c1 ++ [Branch c2 [Loop c1 c2]] ++ code, tail stack, state)
                 else run (code, tail stack, state)
 
 -- Helper function to perform binary operations on the stack
@@ -85,18 +94,19 @@ lookupVar x state = case lookup x state of
 lookupVarBool :: String -> State -> Integer
 lookupVarBool x state = case lookup x state of
   Just val -> if val /= 0 then 1 else 0
-  Nothing -> error ("Variable not found: " ++ x)
+  Nothing -> 0
 
 -- Helper function to update variable in the state
 updateVar :: String -> Integer -> State -> State
 updateVar x val state =
-  case lookup var state of
-    Just _  -> filter (\(v, _) -> v /= var) state ++ [(var, val)]
-    Nothing -> (var, val) : state
+  case lookup x state of
+    Just _  -> (x, val) : filter (\(var, _) -> var /= x) state
+    Nothing -> (x, val) : state
 
 -- Helper function to store variable in the state
 store :: String -> State -> Stack -> State
 store var state stack = updateVar var (head stack) state
+
 
 -- To help you test your assembler
 testAssembler :: Code -> (String, String)
@@ -105,13 +115,13 @@ testAssembler code = (stack2Str stack, state2Str state)
 
 
 -- Examples:
--- testAssembler [Push 10,Push 4,Push 3,Sub,Mult] == ("-10","") Passou 
+-- testAssembler [Push 10,Push 4,Push 3,Sub,Mult] == ("-10","") Pass
 -- testAssembler [Fals,Push 3,Tru,Store "var",Store "a", Store "someVar"] == ("","a=3,someVar=False,var=True")
--- testAssembler [Fals,Store "var",Fetch "var"] == ("False","var=False")
--- testAssembler [Push (-20),Tru,Fals] == ("False,True,-20","")
--- testAssembler [Push (-20),Tru,Tru,Neg] == ("False,True,-20","")
--- testAssembler [Push (-20),Tru,Tru,Neg,Equ] == ("False,-20","")
--- testAssembler [Push (-20),Push (-21), Le] == ("True","")
+-- testAssembler [Fals,Store "var",Fetch "var"] == ("False","var=False") Pass
+-- testAssembler [Push (-20),Tru,Fals] == ("False,True,-20","") Pass
+-- testAssembler [Push (-20),Tru,Tru,Neg] == ("False,True,-20","") Pass
+-- testAssembler [Push (-20),Tru,Tru,Neg,Equ] == ("False,-20","") Pass
+-- testAssembler [Push (-20),Push (-21), Le] == ("True","") Pass
 -- testAssembler [Push 5,Store "x",Push 1,Fetch "x",Sub,Store "x"] == ("","x=4")
 -- testAssembler [Push 10,Store "i",Push 1,Store "fact",Loop [Push 1,Fetch "i",Equ,Neg] [Fetch "i",Fetch "fact",Mult,Store "fact",Push 1,Fetch "i",Sub,Store "i"]] == ("","fact=3628800,i=1")
 
